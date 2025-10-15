@@ -1,0 +1,143 @@
+﻿# name: run_docker_push_acr
+
+# on:
+#     push:
+#         branches:
+#         - main
+        
+# # jobs
+# jobs:
+#     run_docker_push_acr:
+#         name: "Run docker build and push to ACR"
+#         runs-on: ubuntu-latest
+#         environment: production
+
+#         defaults:
+#             run:
+#                 shell: bash
+
+#         steps:
+#         - name: "Checkout repository"
+#           uses: actions/checkout@v4
+#         - name: "Azure Login"
+#           uses: azure/docker-login@v1
+#           with:
+#             login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+#             username: ${{ secrets.REGISTRY_USERNAME }}
+#             password: ${{ secrets.REGISTRY_PASSWORD }}
+
+#         # Build and push docker image
+#         - name: "Build and push docker image"
+#           uses: docker/build-push-action@v5
+#           with:
+#                 push: true
+#                 tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/environmentapi:${{ github.sha }}
+#                 file: ./Dockerfile
+
+# # name: run_docker_push_dockerhub
+
+# # on:
+# #   push:
+# #     branches:
+# #       - main
+
+# # jobs:
+# #   run_docker_push_dockerhub:
+# #     name: "Build and push Docker image to Docker Hub"
+# #     runs-on: ubuntu-latest
+# #     environment: production
+
+# #     defaults:
+# #       run:
+# #         shell: bash
+
+# #     steps:
+# #       - name: "Checkout repository"
+# #         uses: actions/checkout@v4
+
+# #       - name: "Login to Docker Hub"
+# #         uses: docker/login-action@v3
+# #         with:
+# #           username: ${{ secrets.DOCKERHUB_USERNAME }}
+# #           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+# #       - name: "Build and push Docker image"
+# #         uses: docker/build-push-action@v5
+# #         with:
+# #           context: .
+# #           push: true
+# #           tags: ${{ secrets.DOCKERHUB_USERNAME }}/environmentapi:latest
+# #           file: ./Dockerfile
+
+name: Deploy .NET API to Azure Web App
+
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select environment to deploy'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'development' }}
+
+    env:
+      DEPLOY_PACKAGE: ./publish
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build app
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish app
+        run: dotnet publish -c Release -o ${{ env.DEPLOY_PACKAGE }}
+
+      # --- DEV Deployment (auto on dev push) ---
+      - name: Deploy to Azure Web App (Dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: joke-api-dev
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+          package: ${{ env.DEPLOY_PACKAGE }}
+
+      # --- STAGING Deployment (manual)
+      - name: Deploy to Azure Web App (Staging)
+        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'staging'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: joke-api-staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          package: ${{ env.DEPLOY_PACKAGE }}
+
+      # --- PRODUCTION Deployment (manual)
+      - name: Deploy to Azure Web App (Production)
+        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: joke-api-prod
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+          package: ${{ env.DEPLOY_PACKAGE }}
+
