@@ -66,5 +66,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/environmentapi:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/environmentapi:${{ github.sha }}
           file: ./Dockerfile
