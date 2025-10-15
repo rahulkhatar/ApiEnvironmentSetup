@@ -198,12 +198,13 @@ jobs:
     environment: development
     steps:
       - name: Download publish artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: publish-artifact
+          path: ./publish
 
       - name: Deploy to Dev Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v3                 
         with:
           app-name: joke-api-dev
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
@@ -216,9 +217,10 @@ jobs:
     environment: staging
     steps:
       - name: Download publish artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: publish-artifact
+          path: ./publish
 
       - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
@@ -234,9 +236,10 @@ jobs:
     environment: production
     steps:
       - name: Download publish artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: publish-artifact
+          path: ./publish
 
       - name: Deploy to Production Web App
         uses: azure/webapps-deploy@v3
@@ -244,6 +247,7 @@ jobs:
           app-name: joke-api-prod
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ./publish
+
 
 
 
