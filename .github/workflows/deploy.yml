@@ -207,7 +207,7 @@ jobs:
         with:
           app-name: joke-api-dev
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
-          package: '.'
+          package: './publish'
 
   deploy_staging:
     needs: build
@@ -225,7 +225,7 @@ jobs:
         with:
           app-name: joke-api-staging
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
-          package: '.'
+          package: ./publish
 
   deploy_production:
     needs: build
@@ -243,7 +243,7 @@ jobs:
         with:
           app-name: joke-api-prod
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
-          package: '.'
+          package: ./publish
 
 
 
