@@ -32,4 +32,4 @@ jobs:
           with:
                 push: true
                 tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/environmentapi:${{ github.sha }}
-                file: environmentAPI/Dockerfile
+                file: ./Dockerfile
