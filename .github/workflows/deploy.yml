@@ -153,6 +153,101 @@
 # # #           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
 # # #           package: '.'
 
+# name: Build and Deploy .NET API to Azure Web App
+
+# on:
+#   push:
+#     branches:
+#       - dev
+#       - staging
+#       - main
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       publish-path: ./publish
+#     steps:
+#       - name: Checkout source
+#         uses: actions/checkout@v4
+
+#       - name: Setup .NET
+#         uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: '8.0.x'
+
+#       - name: Restore dependencies
+#         run: dotnet restore
+
+#       - name: Build app
+#         run: dotnet build --configuration Release --no-restore
+
+#       - name: Publish app
+#         run: dotnet publish -c Release -o ./publish
+
+#       - name: Upload publish artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: publish-artifact
+#           path: ./publish
+
+#   deploy_dev:
+#     needs: build
+#     if: github.ref == 'refs/heads/dev'
+#     runs-on: ubuntu-latest
+#     environment: dev
+#     steps:
+#       - name: Download publish artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: publish-artifact
+#           path: ./publish
+
+#       - name: Deploy to Dev Web App
+#         uses: azure/webapps-deploy@v3                 
+#         with:
+#           app-name: joke-api-dev
+#           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+#           package: ./publish
+
+#   deploy_staging:
+#     needs: build
+#     if: github.ref == 'refs/heads/staging'
+#     runs-on: ubuntu-latest
+#     environment: staging
+#     steps:
+#       - name: Download publish artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: publish-artifact
+#           path: ./publish
+
+#       - name: Deploy to Staging Web App
+#         uses: azure/webapps-deploy@v3
+#         with:
+#           app-name: joke-api-staging
+#           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+#           package: ./publish
+
+#   deploy_production:
+#     needs: build
+#     if: github.ref == 'refs/heads/main'
+#     runs-on: ubuntu-latest
+#     environment: production
+#     steps:
+#       - name: Download publish artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: publish-artifact
+#           path: ./publish
+
+#       - name: Deploy to Production Web App
+#         uses: azure/webapps-deploy@v3
+#         with:
+#           app-name: joke-api-prod
+#           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+#           package: ./publish
+
 name: Build and Deploy .NET API to Azure Web App
 
 on:
@@ -193,7 +288,7 @@ jobs:
 
   deploy_dev:
     needs: build
-    if: github.ref == 'refs/heads/dev'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'dev')
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -212,7 +307,7 @@ jobs:
 
   deploy_staging:
     needs: build
-    if: github.ref == 'refs/heads/staging'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'staging')
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -231,7 +326,7 @@ jobs:
 
   deploy_production:
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -247,6 +342,7 @@ jobs:
           app-name: joke-api-prod
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ./publish
+  
 
 
 
