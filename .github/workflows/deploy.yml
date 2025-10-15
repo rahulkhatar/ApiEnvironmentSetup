@@ -256,6 +256,11 @@ on:
       - dev
       - staging
       - main
+  pull_request:
+    branches:
+      - dev
+      - staging
+      - main
 
 jobs:
   build:
@@ -288,7 +293,9 @@ jobs:
 
   deploy_dev:
     needs: build
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'dev')
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'dev')
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -307,7 +314,9 @@ jobs:
 
   deploy_staging:
     needs: build
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'staging')
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/staging') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'staging')
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -326,7 +335,9 @@ jobs:
 
   deploy_production:
     needs: build
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -342,6 +353,7 @@ jobs:
           app-name: joke-api-prod
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ./publish
+
   
 
 
