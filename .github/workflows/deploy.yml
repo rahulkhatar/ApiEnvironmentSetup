@@ -69,35 +69,106 @@
 # #           tags: ${{ secrets.DOCKERHUB_USERNAME }}/environmentapi:latest
 # #           file: ./Dockerfile
 
-name: Deploy .NET API to Azure Web App
+# # # name: Build and Deploy .NET API to Azure Web App
+
+# # # on:
+# # #   push:
+# # #     branches:
+# # #       - dev
+# # #       - staging
+# # #       - main
+
+# # #   workflow_dispatch:
+# # #     inputs:
+# # #       environment:
+# # #         description: 'Select environment (staging/production)'
+# # #         required: true
+# # #         type: choice
+# # #         options:
+# # #           - staging
+# # #           - production
+# # #       version:
+# # #         description: 'Git ref (branch, tag, or commit SHA)'
+# # #         required: false
+
+# # # jobs:
+# # #   build-and-deploy:
+# # #     runs-on: ubuntu-latest
+
+# # #     environment:
+# # #       name: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+
+# # #     env:
+# # #       DOTNET_VERSION: '8.0.x'
+# # #       DEPLOY_PACKAGE: ./publish
+# # #       DEPLOY_REF: ${{ inputs.version || github.sha }}
+
+# # #     steps:
+# # #       - name: Checkout source code
+# # #         uses: actions/checkout@v4
+# # #         with:
+# # #           ref: ${{ inputs.version || github.ref }}
+
+# # #       - name: Setup .NET
+# # #         uses: actions/setup-dotnet@v4
+# # #         with:
+# # #           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+# # #       - name: Restore dependencies
+# # #         run: dotnet restore
+
+# # #       - name: Build the app
+# # #         run: dotnet build --configuration Release --no-restore
+
+# # #       - name: Publish the app
+# # #         run: dotnet publish -c Release -o ${{ env.DEPLOY_PACKAGE }}
+
+# # #       #####- name: Show deployed version
+# # #       #####  run: echo "Deploying ref: ${{ env.DEPLOY_REF }}"
+
+# # #       # Dev Deploy
+# # #       - name: Deploy to Azure Web App (Dev)
+# # #         if: github.ref == 'refs/heads/dev'
+# # #         uses: azure/webapps-deploy@v3
+# # #         with:
+# # #           app-name: joke-api-dev
+# # #           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+# # #           package: '.'
+
+# # #       # Staging Deploy
+# # #       - name: Deploy to Azure Web App (Staging)
+# # #         if: github.ref == 'refs/heads/staging' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+# # #         uses: azure/webapps-deploy@v3
+# # #         with:
+# # #           app-name: joke-api-staging
+# # #           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+# # #           package: '.'
+
+# # #       # Production Deploy
+# # #       - name: Deploy to Azure Web App (Production)
+# # #         if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+# # #         uses: azure/webapps-deploy@v3
+# # #         with:
+# # #           app-name: joke-api-prod
+# # #           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+# # #           package: '.'
+
+name: Build and Deploy .NET API to Azure Web App
 
 on:
   push:
     branches:
       - dev
-
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Select environment to deploy'
-        required: true
-        type: choice
-        options:
-          - staging
-          - production
+      - staging
+      - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
-    environment:
-      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'development' }}
-
-    env:
-      DEPLOY_PACKAGE: ./publish
-
+    outputs:
+      publish-path: ./publish
     steps:
-      - name: Checkout source code
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Setup .NET
@@ -112,32 +183,72 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish app
-        run: dotnet publish -c Release -o ${{ env.DEPLOY_PACKAGE }}
+        run: dotnet publish -c Release -o ./publish
 
-      # --- DEV Deployment (auto on dev push) ---
-      - name: Deploy to Azure Web App (Dev)
-        if: github.ref == 'refs/heads/dev'
-        uses: azure/webapps-deploy@v3
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-artifact
+          path: ./publish
+
+  deploy_dev:
+    needs: build
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-artifact
+          path: ./publish
+
+      - name: Deploy to Dev Web App
+        uses: azure/webapps-deploy@v3                 
         with:
           app-name: joke-api-dev
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
-          package: ${{ env.DEPLOY_PACKAGE }}
+          package: ./publish
 
-      # --- STAGING Deployment (manual)
-      - name: Deploy to Azure Web App (Staging)
-        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'staging'
+  deploy_staging:
+    needs: build
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-artifact
+          path: ./publish
+
+      - name: Deploy to Staging Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: joke-api-staging
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
-          package: ${{ env.DEPLOY_PACKAGE }}
+          package: ./publish
 
-      # --- PRODUCTION Deployment (manual)
-      - name: Deploy to Azure Web App (Production)
-        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+  deploy_production:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-artifact
+          path: ./publish
+
+      - name: Deploy to Production Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: joke-api-prod
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
-          package: ${{ env.DEPLOY_PACKAGE }}
+          package: ./publish
+
+
+
+
 
