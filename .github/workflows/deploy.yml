@@ -312,6 +312,16 @@ jobs:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
           package: ./publish
 
+    # To deploy on go-daddy or any other hosting provider
+    #  - name: Deploy to GoDaddy via FTP
+    #    uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+    #    with:
+    #        server: ftp.yourdomain.com
+    #        username: ${{ secrets.FTP_USERNAME }}
+    #        password: ${{ secrets.FTP_PASSWORD }}
+    #        local-dir: ./publish
+    #        server-dir: /httpdocs/YourAppName/
+
   deploy_staging:
     needs: build
     #if: |
